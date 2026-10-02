@@ -73,7 +73,6 @@ export async function GET(request: NextRequest) {
           ${searchPattern}::text IS NULL
 
           OR v.voucher_id::text ILIKE ${searchPattern}
-          OR v.voucher_date::text ILIKE ${searchPattern}
           OR v.payee ILIKE ${searchPattern}
           OR v.amount::text ILIKE ${searchPattern}
           OR v.amount_in_words ILIKE ${searchPattern}
