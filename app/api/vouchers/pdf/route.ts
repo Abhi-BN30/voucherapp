@@ -3,6 +3,8 @@ import { sql } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { generateVoucherPDF } from "@/lib/voucher-pdf";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();

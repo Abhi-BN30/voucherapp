@@ -1,4 +1,184 @@
 "use client";
+
 import { useRouter } from "next/navigation";
-type Props={user:{userId:number;username:string;name:string}};
-export default function DashboardClient({user}:Props){const router=useRouter();async function logout(){await fetch('/api/auth/logout',{method:'POST'});router.push('/');router.refresh();}return <main className="lux-page"><header className="lux-header"><div className="lux-shell flex items-center justify-between py-4"><div className="flex items-center gap-4"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#101827] text-sm font-bold text-[#d8c29a]">PV</div><div><p className="text-[10px] uppercase tracking-[.24em] text-[#b8955a]">Payment Voucher</p><p className="lux-serif text-lg text-[#101827]">Management System</p></div></div><div className="flex items-center gap-3"><div className="hidden text-right sm:block"><p className="text-sm font-semibold">{user.name}</p><p className="text-xs text-slate-500">@{user.username}</p></div><button onClick={logout} className="lux-secondary px-4 py-2.5 text-sm">Sign out</button></div></div></header><div className="lux-shell py-10 sm:py-14"><div className="flex flex-col justify-between gap-8 md:flex-row md:items-end"><div><p className="text-[11px] font-semibold uppercase tracking-[.3em] text-[#b8955a]">Private finance workspace</p><h1 className="lux-serif mt-3 text-4xl leading-tight text-[#101827] sm:text-5xl">Good evening, {user.name}</h1><p className="mt-4 max-w-2xl text-slate-500">Create, review and download payment vouchers for <span className="font-semibold text-slate-700">#99 SESHADRIPURA 2ND MAIN ROAD PROJECT</span>.</p></div></div><div className="mt-10 grid gap-5 md:grid-cols-2"><button onClick={()=>router.push('/vouchers/create')} className="lux-card group p-7 text-left transition hover:-translate-y-0.5 hover:border-[#d8c29a]"><h2 className="lux-serif mt-4 text-2xl">Create Voucher</h2><p className="mt-2 text-sm leading-6 text-slate-500">Enter payment details, generate the voucher and download a print-ready PDF.</p><div className="mt-6 text-sm font-semibold text-[#101827] group-hover:text-[#8b6b38]">Open creation form →</div></button><button onClick={()=>router.push('/vouchers')} className="lux-card group p-7 text-left transition hover:-translate-y-0.5 hover:border-[#d8c29a]"><h2 className="lux-serif mt-4 text-2xl">View All Vouchers</h2><p className="mt-2 text-sm leading-6 text-slate-500">Search, filter, select and combine vouchers into a single PDF.</p><div className="mt-6 text-sm font-semibold text-[#101827] group-hover:text-[#8b6b38]">Open voucher register →</div></button></div><div className="mt-10 lux-card-soft p-6"><div className="flex items-center gap-3"><div className="h-2 w-2 rounded-full bg-[#b8955a]"/><p className="text-sm font-semibold text-slate-800">#99 SESHADRIPURA 2ND MAIN ROAD PROJECT</p></div><p className="mt-2 text-sm text-slate-500">A focused workspace for recording and managing project payment vouchers.</p></div></div></main>}
+
+type Props = {
+  user: {
+    userId: number;
+    username: string;
+    name: string;
+  };
+};
+
+export default function DashboardClient({
+  user,
+}: Props) {
+  const router = useRouter();
+
+  async function logout() {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+
+    router.push("/");
+    router.refresh();
+  }
+
+  return (
+    <main className="lux-page">
+      <header className="lux-header">
+        <div className="lux-shell flex items-center justify-between py-4">
+          <div className="flex items-center gap-4">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#101827] text-sm font-bold text-[#d8c29a]">
+              PV
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase tracking-[.24em] text-[#b8955a]">
+                Payment Voucher
+              </p>
+
+              <p className="lux-serif text-lg text-[#101827]">
+                Management System
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-semibold">
+                {user.name}
+              </p>
+
+              <p className="text-xs text-slate-500">
+                @{user.username}
+              </p>
+            </div>
+
+            <button
+              onClick={logout}
+              className="lux-secondary px-4 py-2.5 text-sm"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="lux-shell py-10 sm:py-14">
+        <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[.3em] text-[#b8955a]">
+              Private finance workspace
+            </p>
+
+            <h1 className="lux-serif mt-3 text-4xl leading-tight text-[#101827] sm:text-5xl">
+              Good evening, {user.name}
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-slate-500">
+              Create, review and download payment
+              vouchers for{" "}
+              <span className="font-semibold text-slate-700">
+                #99 SESHADRIPURA 2ND MAIN ROAD PROJECT
+              </span>
+              .
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {/* Create Voucher */}
+          <button
+            onClick={() =>
+              router.push("/vouchers/create")
+            }
+            className="lux-card group p-7 text-left transition hover:-translate-y-0.5 hover:border-[#d8c29a]"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[.24em] text-[#b8955a]">
+              01
+            </p>
+
+            <h2 className="lux-serif mt-4 text-2xl">
+              Create Voucher
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Enter payment details, generate the
+              voucher and download a print-ready PDF.
+            </p>
+
+            <div className="mt-6 text-sm font-semibold text-[#101827] group-hover:text-[#8b6b38]">
+              Open creation form →
+            </div>
+          </button>
+
+          {/* Voucher Register */}
+          <button
+            onClick={() =>
+              router.push("/vouchers")
+            }
+            className="lux-card group p-7 text-left transition hover:-translate-y-0.5 hover:border-[#d8c29a]"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[.24em] text-[#b8955a]">
+              02
+            </p>
+
+            <h2 className="lux-serif mt-4 text-2xl">
+              View All Vouchers
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Search, sort, filter, edit, delete and
+              combine vouchers into a PDF.
+            </p>
+
+            <div className="mt-6 text-sm font-semibold text-[#101827] group-hover:text-[#8b6b38]">
+              Open voucher register →
+            </div>
+          </button>
+
+          {/* Payee Registry */}
+          <button
+            onClick={() =>
+              router.push("/payees")
+            }
+            className="lux-card group p-7 text-left transition hover:-translate-y-0.5 hover:border-[#d8c29a]"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[.24em] text-[#b8955a]">
+              03
+            </p>
+
+            <h2 className="lux-serif mt-4 text-2xl">
+              Payee Registry
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Add and maintain payees that can be
+              selected while creating vouchers.
+            </p>
+
+            <div className="mt-6 text-sm font-semibold text-[#101827] group-hover:text-[#8b6b38]">
+              Open payee registry →
+            </div>
+          </button>
+        </div>
+
+        <div className="mt-10 lux-card-soft p-6">
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-[#b8955a]" />
+
+            <p className="text-sm font-semibold text-slate-800">
+              #99 SESHADRIPURA 2ND MAIN ROAD PROJECT
+            </p>
+          </div>
+
+          <p className="mt-2 text-sm text-slate-500">
+            A focused workspace for recording and managing
+            project payment vouchers.
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
