@@ -5,6 +5,7 @@ A deployment-ready personal payment voucher management app built with **Next.js 
 ## Included
 
 - Username + 4-digit PIN login
+- Self-service sign up with automatic sign-in
 - HTTP-only signed session cookie
 - Neon PostgreSQL integration
 - Create voucher
@@ -12,6 +13,9 @@ A deployment-ready personal payment voucher management app built with **Next.js 
 - Mandatory validation for Date, Paid To, Amount, Type of Payee, Mode of Payment and Towards
 - Optional PAN and TDS
 - Voucher register with search and filters
+- Searchable luxury-style dropdowns throughout the app
+- Edit existing vouchers
+- Delete existing vouchers with confirmation
 - Individual PDF download
 - Bulk PDF download
 - Date-range PDF download
@@ -52,19 +56,23 @@ The database schema is in:
 
 Run it once in the Neon SQL editor if the database has not already been created.
 
-## 4. Create the first user
+## 4. User accounts
+
+Users can create their own account from the **Create an account** link on the login screen.
+
+The account form asks for:
+
+- name
+- username
+- 4-digit PIN
+
+The PIN is stored as a bcrypt hash and the user is signed in automatically after successful registration.
+
+For local/admin setup, the CLI user creation script is still available:
 
 ```bash
 npm run create-user
 ```
-
-The script asks for:
-
-- username
-- name
-- 4-digit PIN
-
-The PIN is stored as a bcrypt hash.
 
 ## 5. Run locally
 
