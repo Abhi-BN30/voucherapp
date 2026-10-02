@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       SELECT voucher_id,voucher_date,payee,amount,amount_in_words,type_of_payee,custom_payee_type,mode_of_payment,towards,payee_pan,tds
       FROM vouchers
       WHERE voucher_id = ANY(${ids}::bigint[])
+        AND created_by = ${session.userId}
       ORDER BY voucher_date ASC, voucher_id ASC
     `;
 

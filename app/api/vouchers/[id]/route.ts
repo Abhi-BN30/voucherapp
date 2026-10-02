@@ -51,6 +51,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       FROM vouchers v
       INNER JOIN users u ON u.user_id = v.created_by
       WHERE v.voucher_id = ${voucherId}
+        AND v.created_by = ${session.userId}
       LIMIT 1
     `;
 
@@ -91,6 +92,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         voucher_date = ${data.voucherDate},
         updated_at = NOW()
       WHERE voucher_id = ${voucherId}
+        AND created_by = ${session.userId}
       RETURNING *
     `;
 
@@ -114,6 +116,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     const rows = await sql`
       DELETE FROM vouchers
       WHERE voucher_id = ${voucherId}
+        AND created_by = ${session.userId}
       RETURNING voucher_id
     `;
 

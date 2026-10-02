@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
     const vouchers=await sql`
       SELECT v.voucher_id,v.created_by,v.payee,v.amount,v.amount_in_words,v.type_of_payee,v.custom_payee_type,v.mode_of_payment,v.towards,v.payee_pan,v.tds,v.voucher_date,v.created_at,u.name AS created_by_name,u.username AS created_by_username
       FROM vouchers v INNER JOIN users u ON u.user_id=v.created_by
-      WHERE (${searchPattern}::text IS NULL OR v.payee ILIKE ${searchPattern} OR v.towards ILIKE ${searchPattern} OR v.amount::text ILIKE ${searchPattern})
+      WHERE v.created_by = ${session.userId}
+      AND (${searchPattern}::text IS NULL OR v.payee ILIKE ${searchPattern} OR v.towards ILIKE ${searchPattern} OR v.amount::text ILIKE ${searchPattern})
       AND (${fromDate}::date IS NULL OR v.voucher_date >= ${fromDate}::date)
       AND (${toDate}::date IS NULL OR v.voucher_date <= ${toDate}::date)
       AND (${typeFilter}::text IS NULL OR v.type_of_payee::text=${typeFilter})
