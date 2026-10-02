@@ -55,14 +55,16 @@ export async function GET(
       );
     }
 
-    const pdf = await generateVoucherPDF([rows[0] as any]);
+    const pdf = await generateVoucherPDF([
+      rows[0] as any,
+    ]);
 
-    return new NextResponse(pdf, {
-      status: 200,
+    const pdfBuffer = Buffer.from(pdf);
+
+    return new Response(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="voucher-${voucherId}.pdf"`,
-        "Content-Length": String(pdf.length),
       },
     });
   } catch (error) {
