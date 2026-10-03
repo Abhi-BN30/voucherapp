@@ -5,7 +5,6 @@ import {
 
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { generateVoucherPDF } from "@/lib/voucher-pdf";
 
 export async function GET(
   _request: NextRequest,
@@ -22,12 +21,11 @@ export async function GET(
       await getSession();
 
     if (!session) {
-      return NextResponse.json(
+      return new NextResponse(
+        "Unauthorized",
         {
-          message:
-            "Unauthorized",
-        },
-        { status: 401 }
+          status: 401,
+        }
       );
     }
 
@@ -42,29 +40,17 @@ export async function GET(
         voucherId
       )
     ) {
-      return NextResponse.json(
+      return new NextResponse(
+        "Invalid voucher ID",
         {
-          message:
-            "Invalid voucher ID",
-        },
-        { status: 400 }
+          status: 400,
+        }
       );
     }
 
     const rows =
       await sql`
         SELECT
-          voucher_id,
-          voucher_date,
-          payee,
-          amount,
-          amount_in_words,
-          type_of_payee,
-          custom_payee_type,
-          mode_of_payment,
-          towards,
-          payee_pan,
-          tds,
           attachment_data,
           attachment_mime_type,
           attachment_file_name
@@ -74,36 +60,41 @@ export async function GET(
             ${voucherId}
           AND created_by =
             ${session.userId}
-          AND deleted_at IS NULL
+          AND attachment_data
+            IS NOT NULL
         LIMIT 1
       `;
 
-    if (rows.length === 0) {
-      return NextResponse.json(
+    if (!rows.length) {
+      return new NextResponse(
+        "Attachment not found",
         {
-          message:
-            "Voucher not found",
-        },
-        { status: 404 }
+          status: 404,
+        }
       );
     }
 
-    const pdf =
-      await generateVoucherPDF([
-        rows[0] as any,
-      ]);
+    const row = rows[0];
 
     return new NextResponse(
-      Buffer.from(pdf),
+      Buffer.from(
+        row.attachment_data
+      ),
       {
         status: 200,
-
         headers: {
           "Content-Type":
-            "application/pdf",
+            row.attachment_mime_type ||
+            "application/octet-stream",
 
           "Content-Disposition":
-            `inline; filename="voucher-${voucherId}.pdf"`,
+            `inline; filename="${String(
+              row.attachment_file_name ||
+                "attachment"
+            ).replace(
+              /["\r\n]/g,
+              ""
+            )}"`,
 
           "Cache-Control":
             "private, no-store",
@@ -112,16 +103,15 @@ export async function GET(
     );
   } catch (error) {
     console.error(
-      "Voucher PDF error:",
+      "Attachment error:",
       error
     );
 
-    return NextResponse.json(
+    return new NextResponse(
+      "Unable to load attachment",
       {
-        message:
-          "Unable to generate PDF.",
-      },
-      { status: 500 }
+        status: 500,
+      }
     );
   }
 }
