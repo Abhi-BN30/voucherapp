@@ -241,3 +241,526 @@ button { cursor: pointer; }
     flex: 0 0 auto;
   }
 }
+
+/* =========================================================
+   MOBILE BOTTOM NAVIGATION
+   ========================================================= */
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: block;
+
+    position: fixed;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    z-index: 100;
+
+    padding:
+      7px
+      10px
+      max(7px, env(safe-area-inset-bottom));
+
+    background: rgba(
+      255,
+      253,
+      248,
+      0.97
+    );
+
+    border-top: 1px solid var(--border);
+
+    box-shadow:
+      0 -8px 28px
+      rgba(16, 24, 39, 0.09);
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .mobile-bottom-nav-inner {
+    width: 100%;
+    max-width: 520px;
+
+    margin: 0 auto;
+
+    display: grid;
+
+    grid-template-columns:
+      1fr
+      1fr
+      1.15fr
+      1fr
+      1fr;
+
+    align-items: end;
+  }
+
+  .mobile-nav-item {
+    min-width: 0;
+
+    height: 53px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 3px;
+
+    border: 0;
+
+    background: transparent;
+
+    color: #8b919b;
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    transition:
+      color 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .mobile-nav-item.active {
+    color: var(--navy);
+  }
+
+  .mobile-nav-item.active svg {
+    color: var(--gold);
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.94);
+  }
+
+  .mobile-nav-create {
+    position: relative;
+
+    height: 64px;
+
+    margin-top: -24px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: flex-end;
+
+    gap: 3px;
+
+    border: 0;
+
+    background: transparent;
+
+    color: var(--navy);
+
+    font-size: 10px;
+
+    font-weight: 700;
+  }
+
+  .mobile-nav-create-icon {
+    width: 48px;
+    height: 48px;
+
+    display: grid;
+
+    place-items: center;
+
+    border-radius: 15px;
+
+    background: var(--navy);
+
+    color: #fffdf8;
+
+    border: 3px solid var(--paper);
+
+    box-shadow:
+      0 7px 18px
+      rgba(16, 24, 39, 0.2);
+
+    transition:
+      transform 0.18s ease;
+  }
+
+  .mobile-nav-create:active
+    .mobile-nav-create-icon {
+    transform: scale(0.91);
+  }
+
+  .mobile-nav-create-label {
+    line-height: 13px;
+  }
+
+  /*
+   * Dashboard quick-action cards are redundant
+   * on mobile because the bottom navigation
+   * already exposes Home / Vouchers / Create / Payees.
+   */
+  .dashboard-quick-actions {
+    display: none;
+  }
+
+  /*
+   * Desktop-only dashboard header actions.
+   */
+  .dashboard-header-actions {
+    display: none !important;
+  }
+
+  /*
+   * Leave space for the fixed bottom nav.
+   */
+  .lux-page {
+    padding-bottom:
+      calc(
+        78px +
+        env(safe-area-inset-bottom)
+      );
+  }
+
+  /*
+   * Compact dashboard date range.
+   */
+  .dashboard-range {
+    width: 100%;
+
+    flex-wrap: wrap;
+
+    align-items: flex-end;
+  }
+
+  .dashboard-range-field {
+    flex: 1 1 145px;
+
+    width: auto;
+  }
+
+  .dashboard-range-arrow {
+    display: none;
+  }
+
+  .dashboard-range-button {
+    flex: 0 0 auto;
+  }
+}
+
+
+/* =========================================================
+   MOBILE MORE MENU
+   ========================================================= */
+
+.mobile-more-menu {
+  position: fixed;
+
+  right: 10px;
+
+  bottom:
+    calc(
+      76px +
+      env(safe-area-inset-bottom)
+    );
+
+  z-index: 105;
+
+  width: 180px;
+
+  padding: 7px;
+
+  background:
+    rgba(
+      255,
+      253,
+      248,
+      0.98
+    );
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 14px;
+
+  box-shadow:
+    0 18px 40px
+    rgba(16, 24, 39, 0.15);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.mobile-more-menu-title {
+  padding:
+    8px 10px 7px;
+
+  color: #9a8a70;
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.18em;
+
+  text-transform: uppercase;
+}
+
+.mobile-more-menu-item {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  padding:
+    10px;
+
+  border: 0;
+
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: var(--navy);
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  text-align: left;
+}
+
+.mobile-more-menu-item:hover {
+  background: #f8f4eb;
+}
+
+.mobile-more-menu-item.danger {
+  color: #9a4d4d;
+}
+
+
+/* =========================================================
+   PWA INSTALL PROMPT
+   ========================================================= */
+
+.pwa-install-prompt {
+  position: fixed;
+
+  left: 12px;
+  right: 12px;
+
+  bottom:
+    calc(
+      82px +
+      env(safe-area-inset-bottom)
+    );
+
+  z-index: 110;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 11px;
+
+  max-width: 520px;
+
+  margin: 0 auto;
+
+  padding: 11px 12px;
+
+  background:
+    rgba(
+      255,
+      253,
+      248,
+      0.98
+    );
+
+  border:
+    1px solid var(--border);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 16px 40px
+    rgba(16, 24, 39, 0.16);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  animation:
+    pwa-install-slide-up
+    0.28s ease-out;
+}
+
+.pwa-install-icon {
+  flex: 0 0 auto;
+
+  width: 42px;
+  height: 42px;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 12px;
+
+  background: var(--navy);
+
+  color: var(--gold-light);
+
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+
+  font-size: 15px;
+
+  font-weight: 700;
+}
+
+.pwa-install-content {
+  min-width: 0;
+
+  flex: 1;
+}
+
+.pwa-install-title {
+  margin: 0;
+
+  color: var(--navy);
+
+  font-size: 13px;
+
+  font-weight: 700;
+}
+
+.pwa-install-description {
+  margin: 2px 0 0;
+
+  color: var(--muted);
+
+  font-size: 11px;
+
+  line-height: 1.4;
+}
+
+.pwa-install-button {
+  flex: 0 0 auto;
+
+  padding:
+    8px 12px;
+
+  border: 1px solid var(--navy);
+
+  border-radius: 9px;
+
+  background: var(--navy);
+
+  color: #fffdf8;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.pwa-install-button:hover {
+  background: var(--navy-2);
+}
+
+.pwa-install-close {
+  flex: 0 0 auto;
+
+  width: 28px;
+  height: 28px;
+
+  display: grid;
+
+  place-items: center;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #8b919b;
+
+  font-size: 20px;
+
+  line-height: 1;
+}
+
+.pwa-install-close:hover {
+  color: var(--navy);
+}
+
+@keyframes pwa-install-slide-up {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* =========================================================
+   SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 380px) {
+  .mobile-nav-item {
+    font-size: 9px;
+  }
+
+  .mobile-nav-create-icon {
+    width: 44px;
+    height: 44px;
+
+    border-radius: 14px;
+  }
+
+  .mobile-more-menu {
+    right: 8px;
+  }
+
+  .pwa-install-prompt {
+    padding: 9px;
+  }
+
+  .pwa-install-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .pwa-install-description {
+    font-size: 10px;
+  }
+
+  .pwa-install-button {
+    padding:
+      7px 9px;
+
+    font-size: 11px;
+  }
+}

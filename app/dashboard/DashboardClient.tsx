@@ -35,8 +35,10 @@ export default function DashboardClient({
 
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+
   const [data, setData] =
     useState<Stats | null>(null);
+
   const [loading, setLoading] =
     useState(true);
 
@@ -90,6 +92,10 @@ export default function DashboardClient({
 
   return (
     <main className="lux-page">
+      {/* =====================================================
+          HEADER
+          ===================================================== */}
+
       <header className="lux-header">
         <div className="lux-shell flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
@@ -108,7 +114,10 @@ export default function DashboardClient({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Desktop header actions.
+              Hidden on mobile because bottom navigation
+              provides these destinations. */}
+          <div className="dashboard-header-actions flex items-center gap-2">
             <button
               className="lux-secondary"
               onClick={() =>
@@ -128,8 +137,12 @@ export default function DashboardClient({
         </div>
       </header>
 
+      {/* =====================================================
+          MAIN
+          ===================================================== */}
+
       <div className="lux-shell py-8 sm:py-10">
-        {/* Welcome section */}
+        {/* Welcome */}
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[.3em] text-[#b8955a]">
             Project finance workspace
@@ -140,11 +153,14 @@ export default function DashboardClient({
           </h1>
 
           <p className="mt-3 text-sm text-slate-500">
-            #99 SESHADRIPURAM 2ND MAIN ROAD PROJECT
+            #99 SESHADRIPURA 2ND MAIN ROAD PROJECT
           </p>
         </div>
 
-        {/* Compact horizontal date filter */}
+        {/* =================================================
+            DATE RANGE
+            ================================================= */}
+
         <div className="dashboard-range mt-6">
           <div className="dashboard-range-field">
             <label>From</label>
@@ -184,7 +200,10 @@ export default function DashboardClient({
           </button>
         </div>
 
-        {/* Summary */}
+        {/* =================================================
+            SUMMARY CARDS
+            ================================================= */}
+
         <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             [
@@ -220,24 +239,33 @@ export default function DashboardClient({
               "Payment Modes",
               data?.modes.length ?? 0,
             ],
-          ].map(([a, b]) => (
+          ].map(([label, value]) => (
             <div
-              key={String(a)}
+              key={String(label)}
               className="lux-card p-5"
             >
               <p className="text-xs uppercase tracking-wider text-slate-400">
-                {a}
+                {label}
               </p>
 
               <p className="metric-number mt-2 text-3xl">
-                {loading ? "—" : b}
+                {loading ? "—" : value}
               </p>
             </div>
           ))}
         </div>
 
-        {/* Quick actions */}
-        <div className="mt-7 grid gap-5 lg:grid-cols-3">
+        {/* =================================================
+            DESKTOP QUICK ACTIONS
+
+            These remain on desktop.
+
+            On mobile they are hidden because the mobile
+            bottom navigation already contains:
+            Home / Vouchers / Create / Payees / More
+            ================================================= */}
+
+        <div className="dashboard-quick-actions mt-7 grid gap-5 lg:grid-cols-3">
           <button
             onClick={() =>
               r.push(
@@ -314,8 +342,12 @@ export default function DashboardClient({
           </button>
         </div>
 
-        {/* Expense type + monthly */}
+        {/* =================================================
+            ANALYTICS
+            ================================================= */}
+
         <div className="mt-7 grid gap-5 lg:grid-cols-2">
+          {/* Expense type */}
           <div className="lux-card p-6">
             <p className="text-[11px] uppercase tracking-[.28em] text-[#b8955a]">
               Expense type
@@ -381,6 +413,7 @@ export default function DashboardClient({
             </div>
           </div>
 
+          {/* Monthly expenditure */}
           <div className="lux-card p-6">
             <p className="text-[11px] uppercase tracking-[.28em] text-[#b8955a]">
               Monthly expenditure
@@ -433,6 +466,7 @@ export default function DashboardClient({
             </div>
           </div>
 
+          {/* Payment mode */}
           <div className="lux-card p-6">
             <p className="text-[11px] uppercase tracking-[.28em] text-[#b8955a]">
               Payment mode
@@ -493,7 +527,10 @@ export default function DashboardClient({
           </div>
         </div>
 
-        {/* Recent vouchers */}
+        {/* =================================================
+            RECENT VOUCHERS
+            ================================================= */}
+
         <div className="lux-card mt-5 overflow-hidden">
           <div className="flex items-center justify-between border-b border-[#e6e0d5] px-6 py-5">
             <div>
