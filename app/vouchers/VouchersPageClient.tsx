@@ -468,16 +468,7 @@ export default function VouchersPageClient({
               Clear
             </button>
 
-            <button
-              className="lux-secondary"
-              onClick={() =>
-                setArchived((v) => !v)
-              }
-            >
-              {archived
-                ? "Active Vouchers"
-                : "Archived"}
-            </button>
+            
           </div>
         </div>
 
@@ -519,6 +510,17 @@ export default function VouchersPageClient({
               }
             >
               Export Excel
+            </button>
+
+            <button
+              className="lux-secondary"
+              onClick={() =>
+                setArchived((v) => !v)
+              }
+            >
+              {archived
+                ? "Active Vouchers"
+                : "Archived"}
             </button>
           </div>
         </div>

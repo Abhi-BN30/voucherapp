@@ -140,7 +140,7 @@ export default function DashboardClient({
           </h1>
 
           <p className="mt-3 text-sm text-slate-500">
-            #99 SESHADRIPURA 2ND MAIN ROAD PROJECT
+            #99 SESHADRIPURAM 2ND MAIN ROAD PROJECT
           </p>
         </div>
 
