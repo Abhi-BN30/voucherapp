@@ -3,8 +3,6 @@ import { sql } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { generateVoucherPDF } from "@/lib/voucher-pdf";
 
-export const runtime = "nodejs";
-
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -23,6 +21,7 @@ export async function POST(request: NextRequest) {
       FROM vouchers
       WHERE voucher_id = ANY(${ids}::bigint[])
         AND created_by = ${session.userId}
+        AND deleted_at IS NULL
       ORDER BY voucher_date ASC, voucher_id ASC
     `;
 

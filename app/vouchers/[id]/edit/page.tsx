@@ -19,6 +19,7 @@ export default async function EditVoucherPage({ params }: { params: Promise<{ id
     FROM vouchers
     WHERE voucher_id = ${voucherId}
       AND created_by = ${session.userId}
+      AND deleted_at IS NULL
     LIMIT 1
   `;
 

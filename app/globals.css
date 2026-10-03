@@ -42,3 +42,202 @@ button { cursor: pointer; }
 @media (max-width: 640px) {
   .lux-shell { width: min(100% - 20px, 1180px); }
 }
+
+/* =========================================================
+   Voucher Registry — 3-dot action menu
+   ========================================================= */
+
+.action-menu-trigger {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: #fffefa;
+  color: var(--navy);
+
+  font-size: 23px;
+  line-height: 1;
+
+  letter-spacing: 2px;
+
+  padding: 0 0 7px 2px;
+
+  transition: 0.18s;
+
+  position: relative;
+  z-index: 30;
+}
+
+.action-menu-trigger:hover,
+.action-menu-trigger[aria-expanded="true"] {
+  border-color: var(--gold);
+  background: #fbf7ee;
+}
+
+.action-menu {
+  position: absolute;
+
+  top: calc(100% + 8px);
+  right: 0;
+
+  z-index: 40;
+
+  width: 150px;
+
+  padding: 6px;
+
+  background: var(--paper);
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  box-shadow:
+    0 18px 40px rgba(16, 24, 39, 0.14);
+}
+
+.action-menu button {
+  display: block;
+
+  width: 100%;
+
+  text-align: left;
+
+  padding: 9px 10px;
+
+  border-radius: 8px;
+
+  color: var(--navy);
+
+  font-size: 14px;
+  font-weight: 600;
+
+  background: transparent;
+  border: 0;
+}
+
+.action-menu button:hover {
+  background: #fbf7ee;
+}
+
+.action-menu button.danger {
+  color: #9a4d4d;
+}
+
+.action-menu button.danger:hover {
+  background: #fff4f2;
+}
+
+
+/* =========================================================
+   Dashboard — compact horizontal date range
+   ========================================================= */
+
+.dashboard-range {
+  display: flex;
+
+  align-items: flex-end;
+
+  gap: 10px;
+
+  width: fit-content;
+  max-width: 100%;
+
+  padding: 10px;
+
+  background: rgba(255, 253, 248, 0.82);
+
+  border: 1px solid var(--border);
+
+  border-radius: 14px;
+
+  box-shadow:
+    0 8px 24px rgba(16, 24, 39, 0.035);
+}
+
+.dashboard-range-field {
+  width: 170px;
+}
+
+.dashboard-range-field label {
+  display: block;
+
+  margin:
+    0 0 5px 2px;
+
+  color: #7a7f88;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 0.13em;
+
+  text-transform: uppercase;
+}
+
+.dashboard-range .lux-input {
+  height: 40px;
+
+  padding:
+    8px 11px;
+
+  border-radius: 9px;
+
+  font-size: 13px;
+}
+
+.dashboard-range-button {
+  height: 40px;
+
+  padding:
+    8px 14px;
+
+  border-radius: 9px;
+
+  font-size: 13px;
+
+  white-space: nowrap;
+}
+
+.dashboard-range-arrow {
+  color: var(--gold);
+
+  font-size: 16px;
+
+  line-height: 40px;
+
+  padding-bottom: 0;
+}
+
+
+/* =========================================================
+   Mobile
+   ========================================================= */
+
+@media (max-width: 640px) {
+  .dashboard-range {
+    width: 100%;
+
+    flex-wrap: wrap;
+
+    align-items: flex-end;
+  }
+
+  .dashboard-range-field {
+    flex: 1 1 145px;
+
+    width: auto;
+  }
+
+  .dashboard-range-arrow {
+    display: none;
+  }
+
+  .dashboard-range-button {
+    flex: 0 0 auto;
+  }
+}

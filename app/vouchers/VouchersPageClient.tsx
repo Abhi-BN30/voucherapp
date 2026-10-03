@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import SearchableSelect from "@/components/SearchableSelect";
 import PdfPreviewModal from "@/components/PdfPreviewModal";
-import { PAYEE_TYPES, PAYMENT_MODES } from "@/lib/voucher-options";
+import {
+  PAYEE_TYPES,
+  PAYMENT_MODES,
+} from "@/lib/voucher-options";
+import { formatVoucherNumber } from "@/lib/voucher-utils";
 
 type User = {
   userId: number;
@@ -17,785 +21,374 @@ type Voucher = {
   voucher_date: string;
   payee: string;
   amount: string;
-  amount_in_words: string;
   type_of_payee: string;
   custom_payee_type: string | null;
   mode_of_payment: string;
   towards: string;
-  payee_pan: string | null;
-  tds: string | null;
   created_by_name: string;
-  created_by_username: string;
+  deleted_at: string | null;
 };
 
-type Props = {
-  user: User;
-};
-
-type SortKey =
-  | "voucher_id"
-  | "voucher_date"
-  | "payee"
-  | "type_of_payee"
-  | "towards"
-  | "amount"
-  | "mode_of_payment"
-  | "created_by_name";
-
-type SortDirection = "asc" | "desc";
-
-function formatDate(value: string) {
-  const datePart = String(value || "").split("T")[0];
-
-  const parts = datePart.split("-");
-
-  return parts.length === 3
-    ? `${parts[2]}-${parts[1]}-${parts[0]}`
-    : "-";
-}
-
-function compareValues(
-  a: Voucher,
-  b: Voucher,
-  key: SortKey
-) {
-  switch (key) {
-    case "voucher_id":
-      return (
-        Number(a.voucher_id) -
-        Number(b.voucher_id)
-      );
-
-    case "amount":
-      return (
-        Number(a.amount) -
-        Number(b.amount)
-      );
-
-    case "voucher_date":
-      return (
-        String(a.voucher_date).localeCompare(
-          String(b.voucher_date)
-        )
-      );
-
-    case "type_of_payee":
-      return String(
-        a.type_of_payee === "Custom"
-          ? a.custom_payee_type || "Custom"
-          : a.type_of_payee
-      ).localeCompare(
-        String(
-          b.type_of_payee === "Custom"
-            ? b.custom_payee_type ||
-                "Custom"
-            : b.type_of_payee
-        )
-      );
-
-    case "payee":
-      return a.payee.localeCompare(
-        b.payee,
-        undefined,
-        { sensitivity: "base" }
-      );
-
-    case "towards":
-      return a.towards.localeCompare(
-        b.towards,
-        undefined,
-        { sensitivity: "base" }
-      );
-
-    case "mode_of_payment":
-      return a.mode_of_payment.localeCompare(
-        b.mode_of_payment,
-        undefined,
-        { sensitivity: "base" }
-      );
-
-    case "created_by_name":
-      return a.created_by_name.localeCompare(
-        b.created_by_name,
-        undefined,
-        { sensitivity: "base" }
-      );
-
-    default:
-      return 0;
-  }
+function date(v: string) {
+  return String(v)
+    .slice(0, 10)
+    .split("-")
+    .reverse()
+    .join("-");
 }
 
 export default function VouchersPageClient({
   user,
-}: Props) {
-  const router = useRouter();
+}: {
+  user: User;
+}) {
+  const r = useRouter();
 
-  const [vouchers, setVouchers] =
-    useState<Voucher[]>([]);
-
-  const [selected, setSelected] =
-    useState<number[]>([]);
-
+  const [rows, setRows] = useState<Voucher[]>([]);
   const [search, setSearch] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [type, setType] = useState("");
   const [mode, setMode] = useState("");
+  const [archived, setArchived] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState<number | null>(null);
 
-  const [sortKey, setSortKey] =
-    useState<SortKey>("voucher_date");
+  const [actionOpen, setActionOpen] = useState<number | null>(null);
 
-  const [sortDirection, setSortDirection] =
-    useState<SortDirection>("desc");
+  const [sort, setSort] = useState<{
+    k: keyof Voucher | "";
+    dir: 1 | -1;
+  }>({
+    k: "voucher_date",
+    dir: -1,
+  });
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [downloading, setDownloading] =
-    useState(false);
-
-  const [deletingId, setDeletingId] =
-    useState<number | null>(null);
-
-  const [openActionId, setOpenActionId] =
-    useState<number | null>(null);
-
-  const [error, setError] =
-    useState("");
-
-  const [pdfPreviewOpen, setPdfPreviewOpen] =
-    useState(false);
-
-  const [pdfPreviewUrl, setPdfPreviewUrl] =
-    useState<string | null>(null);
-
-  const [pdfPreviewFileName, setPdfPreviewFileName] =
-    useState("payment-vouchers.pdf");
-
-  const [pdfPreviewLoading, setPdfPreviewLoading] =
-    useState(false);
-
-  const [pdfPreviewError, setPdfPreviewError] =
-    useState("");
-
-  async function loadVouchersWithFilters(
-    s: string,
-    f: string,
-    t: string,
-    ty: string,
-    m: string
-  ) {
+  async function load() {
     setLoading(true);
     setError("");
+    setActionOpen(null);
 
-    try {
-      const params = new URLSearchParams();
+    const p = new URLSearchParams();
 
-      if (s.trim()) {
-        params.set("search", s.trim());
-      }
-
-      if (f) {
-        params.set("from", f);
-      }
-
-      if (t) {
-        params.set("to", t);
-      }
-
-      if (ty) {
-        params.set("type", ty);
-      }
-
-      if (m) {
-        params.set("mode", m);
-      }
-
-      const response = await fetch(
-        params.toString()
-          ? `/api/vouchers?${params}`
-          : "/api/vouchers"
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(
-          data?.error ||
-            data?.message ||
-            "Unable to load vouchers."
-        );
-
-        return [];
-      }
-
-      const rows = data.vouchers || [];
-
-      setVouchers(rows);
-      setSelected([]);
-
-      return rows;
-    } catch {
-      setError(
-        "Unable to connect to the server."
-      );
-
-      return [];
-    } finally {
-      setLoading(false);
+    if (search.trim()) {
+      p.set("search", search.trim());
     }
-  }
 
-  async function loadVouchers() {
-    await loadVouchersWithFilters(
-      search,
-      from,
-      to,
-      type,
-      mode
-    );
+    if (from) {
+      p.set("from", from);
+    }
+
+    if (to) {
+      p.set("to", to);
+    }
+
+    if (type) {
+      p.set("type", type);
+    }
+
+    if (mode) {
+      p.set("mode", mode);
+    }
+
+    if (archived) {
+      p.set("archived", "1");
+    }
+
+    const x = await fetch(`/api/vouchers?${p}`);
+    const d = await x.json();
+
+    if (!x.ok) {
+      setError(
+        d.message ||
+          d.error ||
+          "Unable to load vouchers"
+      );
+    } else {
+      setRows(d.vouchers || []);
+      setSelected([]);
+    }
+
+    setLoading(false);
   }
 
   useEffect(() => {
-    loadVouchersWithFilters(
-      "",
-      "",
-      "",
-      "",
-      ""
-    );
-  }, []);
+    load();
+  }, [archived]);
 
-  /*
-   * Stable client-side sorting.
-   *
-   * The API already gives us a deterministic
-   * default order. Clicking a column header
-   * changes the local ordering without another
-   * database request.
-   */
-  const sortedVouchers = useMemo(() => {
-    const rows = [...vouchers];
+  const sorted = useMemo(
+    () =>
+      [...rows].sort((a: any, b: any) => {
+        const k = sort.k;
 
-    rows.sort((a, b) => {
-      const result = compareValues(
-        a,
-        b,
-        sortKey
-      );
+        if (!k) {
+          return 0;
+        }
 
-      if (result !== 0) {
-        return sortDirection === "asc"
-          ? result
-          : -result;
-      }
+        let av = a[k];
+        let bv = b[k];
 
-      /*
-       * Stable tie-breaker.
-       */
-      return (
-        Number(b.voucher_id) -
-        Number(a.voucher_id)
-      );
-    });
+        if (k === "voucher_date") {
+          av = String(av).slice(0, 10);
+          bv = String(bv).slice(0, 10);
+        }
 
-    return rows;
-  }, [
-    vouchers,
-    sortKey,
-    sortDirection,
-  ]);
+        if (k === "amount") {
+          av = Number(av);
+          bv = Number(bv);
+        }
 
-  function sortBy(key: SortKey) {
-    if (sortKey === key) {
-      setSortDirection((current) =>
-        current === "asc"
-          ? "desc"
-          : "asc"
-      );
-    } else {
-      setSortKey(key);
+        return av < bv
+          ? -1 * sort.dir
+          : av > bv
+          ? sort.dir
+          : 0;
+      }),
+    [rows, sort]
+  );
 
-      /*
-       * Text columns start ascending.
-       * Numeric/date columns start descending
-       * so the newest/highest values are useful
-       * immediately.
-       */
-      if (
-        key === "voucher_date" ||
-        key === "voucher_id" ||
-        key === "amount"
-      ) {
-        setSortDirection("desc");
-      } else {
-        setSortDirection("asc");
-      }
-    }
-  }
+  function toggleSort(k: keyof Voucher) {
+    setActionOpen(null);
 
-  function SortButton({
-    label,
-    column,
-  }: {
-    label: string;
-    column: SortKey;
-  }) {
-    const active = sortKey === column;
-
-    return (
-      <button
-        type="button"
-        onClick={() => sortBy(column)}
-        className="group inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 transition hover:text-[#101827]"
-      >
-        <span>{label}</span>
-
-        <span
-          className={`text-[11px] ${
-            active
-              ? "text-[#b8955a]"
-              : "text-slate-300 group-hover:text-[#b8955a]"
-          }`}
-        >
-          {active
-            ? sortDirection === "asc"
-              ? "↑"
-              : "↓"
-            : "↕"}
-        </span>
-      </button>
+    setSort((s) =>
+      s.k === k
+        ? {
+            k,
+            dir: s.dir === 1 ? -1 : 1,
+          }
+        : {
+            k,
+            dir: 1,
+          }
     );
   }
 
   function toggle(id: number) {
-    setSelected((current) =>
-      current.includes(id)
-        ? current.filter(
-            (value) => value !== id
-          )
-        : [...current, id]
+    setActionOpen(null);
+
+    setSelected((s) =>
+      s.includes(id)
+        ? s.filter((x) => x !== id)
+        : [...s, id]
     );
   }
 
   function toggleAll() {
-    const visibleIds =
-      sortedVouchers.map(
-        (voucher) => voucher.voucher_id
-      );
+    setActionOpen(null);
 
-    const allSelected =
-      visibleIds.length > 0 &&
-      visibleIds.every((id) =>
-        selected.includes(id)
-      );
-
-    if (allSelected) {
-      setSelected((current) =>
-        current.filter(
-          (id) => !visibleIds.includes(id)
-        )
-      );
-    } else {
-      setSelected((current) =>
-        Array.from(
-          new Set([
-            ...current,
-            ...visibleIds,
-          ])
-        )
-      );
-    }
-  }
-
-  async function clear() {
-    setSearch("");
-    setFrom("");
-    setTo("");
-    setType("");
-    setMode("");
-
-    await loadVouchersWithFilters(
-      "",
-      "",
-      "",
-      "",
-      ""
+    setSelected(
+      selected.length === sorted.length
+        ? []
+        : sorted.map((x) => x.voucher_id)
     );
   }
 
-  async function deleteVoucher() {
-    if (!deletingId) return;
-
-    setError("");
-
-    try {
-      const response = await fetch(
-        `/api/vouchers/${deletingId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-            "Unable to delete voucher."
-        );
-      }
-
-      setDeletingId(null);
-      setOpenActionId(null);
-
-      setSelected((current) =>
-        current.filter(
-          (id) => id !== deletingId
-        )
-      );
-
-      await loadVouchersWithFilters(
-        search,
-        from,
-        to,
-        type,
-        mode
-      );
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Unable to delete voucher."
-      );
-
-      setDeletingId(null);
-    }
-  }
-
-  function closePdfPreview() {
-    if (pdfPreviewUrl) {
-      URL.revokeObjectURL(
-        pdfPreviewUrl
-      );
-    }
-
-    setPdfPreviewUrl(null);
-    setPdfPreviewOpen(false);
-    setPdfPreviewLoading(false);
-    setPdfPreviewError("");
-  }
-
-  function downloadPreviewedPdf() {
-    if (!pdfPreviewUrl) return;
-
-    const link =
-      document.createElement("a");
-
-    link.href = pdfPreviewUrl;
-    link.download =
-      pdfPreviewFileName;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }
-
-  async function previewPdf(
-    request: RequestInfo | URL,
-    options?: RequestInit,
-    fileName = "payment-vouchers.pdf"
-  ) {
-    if (pdfPreviewUrl) {
-      URL.revokeObjectURL(
-        pdfPreviewUrl
-      );
-    }
-
-    setPdfPreviewOpen(true);
-    setPdfPreviewLoading(true);
-    setPdfPreviewError("");
-    setPdfPreviewUrl(null);
-    setPdfPreviewFileName(fileName);
-
-    try {
-      const response = await fetch(
-        request,
-        options
-      );
-
-      if (!response.ok) {
-        let message =
-          "Unable to generate PDF.";
-
-        try {
-          const data =
-            await response.json();
-
-          message =
-            data?.message ||
-            data?.error ||
-            message;
-
-          if (data?.details) {
-            message = `${message} ${data.details}`;
-          }
-        } catch {
-          // Non-JSON response.
-        }
-
-        throw new Error(message);
-      }
-
-      const blob =
-        await response.blob();
-
-      if (
-        blob.type !==
-        "application/pdf"
-      ) {
-        throw new Error(
-          "The server did not return a valid PDF."
-        );
-      }
-
-      const url =
-        URL.createObjectURL(blob);
-
-      setPdfPreviewUrl(url);
-    } catch (error) {
-      setPdfPreviewError(
-        error instanceof Error
-          ? error.message
-          : "Unable to generate PDF."
-      );
-    } finally {
-      setPdfPreviewLoading(false);
-    }
-  }
-
-  async function previewVoucher(
-    voucherId: number
-  ) {
-    setOpenActionId(null);
-
-    await previewPdf(
-      `/api/vouchers/${voucherId}/pdf`,
-      undefined,
-      `voucher-${voucherId}.pdf`
-    );
-  }
-
-  async function downloadIds(
-    ids: number[]
-  ) {
-    if (!ids.length) return;
-
-    setDownloading(true);
-    setError("");
-
-    try {
-      await previewPdf(
-        "/api/vouchers/pdf",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            voucherIds: ids,
-          }),
-        },
-        "payment-vouchers-selected.pdf"
-      );
-    } finally {
-      setDownloading(false);
-    }
-  }
-
-  async function downloadDateRange() {
-    if (!from && !to) {
-      setError(
-        "Please select a date range first."
-      );
-
+  async function archive(id: number) {
+    if (
+      !confirm(
+        "Archive this voucher? It will be removed from the active register but can be restored."
+      )
+    ) {
       return;
     }
 
-    setDownloading(true);
-    setError("");
+    const x = await fetch(`/api/vouchers/${id}`, {
+      method: "DELETE",
+    });
 
-    try {
-      const params =
-        new URLSearchParams();
+    if (x.ok) {
+      load();
+    } else {
+      const d = await x.json();
 
-      if (from) {
-        params.set("from", from);
-      }
-
-      if (to) {
-        params.set("to", to);
-      }
-
-      const response = await fetch(
-        `/api/vouchers?${params}`
-      );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.error ||
-            data?.message ||
-            "Unable to fetch vouchers for the selected date range."
-        );
-      }
-
-      const ids = (
-        data.vouchers || []
-      ).map(
-        (voucher: Voucher) =>
-          voucher.voucher_id
-      );
-
-      if (!ids.length) {
-        throw new Error(
-          "No vouchers found for the selected date range."
-        );
-      }
-
-      await previewPdf(
-        "/api/vouchers/pdf",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            voucherIds: ids,
-          }),
-        },
-        "payment-vouchers-date-range.pdf"
-      );
-    } catch (error) {
       setError(
-        error instanceof Error
-          ? error.message
-          : "Unable to generate PDF."
+        d.message ||
+          "Unable to archive voucher."
       );
-    } finally {
-      setDownloading(false);
     }
+  }
+
+  async function restore(id: number) {
+    const x = await fetch(`/api/vouchers/${id}`, {
+      method: "PATCH",
+    });
+
+    if (x.ok) {
+      load();
+    } else {
+      const d = await x.json();
+
+      setError(
+        d.message ||
+          "Unable to restore voucher."
+      );
+    }
+  }
+
+  async function exportFile(
+    format: "csv" | "xls"
+  ) {
+    const p = new URLSearchParams({
+      format,
+    });
+
+    if (search) {
+      p.set("search", search);
+    }
+
+    if (from) {
+      p.set("from", from);
+    }
+
+    if (to) {
+      p.set("to", to);
+    }
+
+    if (type) {
+      p.set("type", type);
+    }
+
+    if (mode) {
+      p.set("mode", mode);
+    }
+
+    const x = await fetch(
+      `/api/vouchers/export?${p}`
+    );
+
+    if (!x.ok) {
+      setError(
+        "Unable to export register."
+      );
+      return;
+    }
+
+    const b = await x.blob();
+    const u = URL.createObjectURL(b);
+
+    const a = document.createElement("a");
+    a.href = u;
+    a.download =
+      format === "csv"
+        ? "voucher-register.csv"
+        : "voucher-register.xls";
+
+    a.click();
+
+    URL.revokeObjectURL(u);
+  }
+
+  async function downloadSelected() {
+    if (!selected.length) {
+      return;
+    }
+
+    const x = await fetch(
+      "/api/vouchers/pdf",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          voucherIds: selected,
+        }),
+      }
+    );
+
+    if (!x.ok) {
+      setError(
+        "Unable to generate PDF."
+      );
+      return;
+    }
+
+    const b = await x.blob();
+    const u = URL.createObjectURL(b);
+
+    const a = document.createElement("a");
+    a.href = u;
+    a.download =
+      "payment-vouchers.pdf";
+
+    a.click();
+
+    URL.revokeObjectURL(u);
   }
 
   return (
     <main className="lux-page">
       <header className="lux-header">
         <div className="lux-shell flex items-center justify-between py-4">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#101827] text-sm font-bold text-[#d8c29a]">
-              PV
-            </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-[.24em] text-[#b8955a]">
+              Payment Voucher
+            </p>
 
-            <div>
-              <p className="text-[10px] uppercase tracking-[.24em] text-[#b8955a]">
-                Payment Voucher
-              </p>
-
-              <p className="lux-serif text-lg">
-                Voucher Register
-              </p>
-            </div>
+            <p className="lux-serif text-lg">
+              Voucher Register
+            </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold">
-                {user.name}
-              </p>
-
-              <p className="text-xs text-slate-500">
-                @{user.username}
-              </p>
-            </div>
-
+          <div className="flex gap-2">
             <button
-              className="lux-secondary px-4 py-2.5 text-sm"
+              className="lux-secondary"
               onClick={() =>
-                router.push("/dashboard")
+                r.push("/dashboard")
               }
             >
               Dashboard
+            </button>
+
+            <button
+              className="lux-primary"
+              onClick={() =>
+                r.push("/vouchers/create")
+              }
+            >
+              + Create
             </button>
           </div>
         </div>
       </header>
 
-      <div className="lux-shell py-8 sm:py-10">
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#b8955a]">
-              Payment records
-            </p>
+      <div className="lux-shell py-8">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#b8955a]">
+            Payment records
+          </p>
 
-            <h1 className="lux-serif mt-2 text-4xl">
-              Vouchers
-            </h1>
-
-            <p className="mt-2 text-sm text-slate-500">
-              Search, sort, filter and manage your
-              payment vouchers.
-            </p>
-          </div>
-
-          <button
-            className="lux-primary"
-            onClick={() =>
-              router.push(
-                "/vouchers/create"
-              )
-            }
-          >
-            + Create Voucher
-          </button>
+          <h1 className="lux-serif mt-2 text-4xl">
+            {archived
+              ? "Archived Vouchers"
+              : "Vouchers"}
+          </h1>
         </div>
 
         {/* Filters */}
-        <div className="lux-card mt-8 p-5">
+        <div className="lux-card mt-7 p-5">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <div className="lg:col-span-2">
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Search All Columns
+                Search
               </label>
 
               <input
                 className="lux-input"
                 value={search}
-                onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
+                onChange={(e) =>
+                  setSearch(e.target.value)
                 }
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter"
-                  ) {
-                    loadVouchers();
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    load();
                   }
                 }}
-                placeholder="Search any voucher value…"
+                placeholder="Voucher no., paid to, type, towards, amount or mode"
               />
-
-              <p className="mt-2 text-xs text-slate-400">
-                Voucher no., date, payee, amount,
-                type, mode, PAN, TDS, towards,
-                creator and more.
-              </p>
             </div>
 
             <div>
@@ -807,10 +400,8 @@ export default function VouchersPageClient({
                 className="lux-input"
                 type="date"
                 value={from}
-                onChange={(event) =>
-                  setFrom(
-                    event.target.value
-                  )
+                onChange={(e) =>
+                  setFrom(e.target.value)
                 }
               />
             </div>
@@ -824,26 +415,22 @@ export default function VouchersPageClient({
                 className="lux-input"
                 type="date"
                 value={to}
-                onChange={(event) =>
-                  setTo(
-                    event.target.value
-                  )
+                onChange={(e) =>
+                  setTo(e.target.value)
                 }
               />
             </div>
 
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Payee Type
+                Type
               </label>
 
               <SearchableSelect
                 value={type}
-                options={[
-                  ...PAYEE_TYPES,
-                ]}
+                options={[...PAYEE_TYPES]}
                 placeholder="All types"
-                searchPlaceholder="Search payee type…"
+                searchPlaceholder="Search type…"
                 onChange={setType}
               />
             </div>
@@ -853,75 +440,85 @@ export default function VouchersPageClient({
             <SearchableSelect
               className="w-full max-w-xs"
               value={mode}
-              options={[
-                ...PAYMENT_MODES,
-              ]}
+              options={[...PAYMENT_MODES]}
               placeholder="All payment modes"
-              searchPlaceholder="Search payment mode…"
+              searchPlaceholder="Search mode…"
               onChange={setMode}
             />
 
             <button
               className="lux-primary"
-              disabled={loading}
-              onClick={loadVouchers}
+              onClick={load}
             >
-              {loading
-                ? "Loading…"
-                : "Search"}
+              Search
             </button>
 
             <button
               className="lux-secondary"
-              disabled={loading}
-              onClick={clear}
+              onClick={() => {
+                setSearch("");
+                setFrom("");
+                setTo("");
+                setType("");
+                setMode("");
+
+                setTimeout(load, 0);
+              }}
             >
               Clear
+            </button>
+
+            <button
+              className="lux-secondary"
+              onClick={() =>
+                setArchived((v) => !v)
+              }
+            >
+              {archived
+                ? "Active Vouchers"
+                : "Archived"}
             </button>
           </div>
         </div>
 
-        {/* Action bar */}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        {/* Register controls */}
+        <div className="mt-5 flex flex-wrap justify-between gap-3">
           <p className="text-sm text-slate-500">
-            <span className="font-semibold text-slate-800">
-              {vouchers.length}
-            </span>{" "}
+            <b className="text-slate-800">
+              {sorted.length}
+            </b>{" "}
             voucher
-            {vouchers.length === 1
+            {sorted.length === 1
               ? ""
-              : "s"} found
+              : "s"}
           </p>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             <button
               className="lux-secondary"
-              disabled={
-                !selected.length ||
-                downloading
-              }
-              onClick={() =>
-                downloadIds(selected)
-              }
+              disabled={!selected.length}
+              onClick={downloadSelected}
             >
-              {downloading
-                ? "Generating…"
-                : `PDF Selected (${selected.length})`}
+              Download Selected (
+              {selected.length})
             </button>
 
             <button
-              className="lux-primary"
-              disabled={
-                downloading ||
-                (!from && !to)
-              }
-              onClick={
-                downloadDateRange
+              className="lux-secondary"
+              onClick={() =>
+                exportFile("csv")
               }
             >
-              {downloading
-                ? "Generating…"
-                : "PDF Date Range"}
+              Export CSV
+            </button>
+
+            <button
+              className="lux-secondary"
+              onClick={() =>
+                exportFile("xls")
+              }
+            >
+              Export Excel
             </button>
           </div>
         </div>
@@ -935,263 +532,244 @@ export default function VouchersPageClient({
         {/* Voucher table */}
         <div className="lux-card mt-5 overflow-hidden">
           {loading ? (
-            <div className="px-6 py-16 text-center text-sm text-slate-500">
+            <div className="p-12 text-center text-sm text-slate-500">
               Loading vouchers…
-            </div>
-          ) : !vouchers.length ? (
-            <div className="px-6 py-16 text-center">
-              <p className="lux-serif text-2xl">
-                No vouchers found
-              </p>
-
-              <p className="mt-2 text-sm text-slate-500">
-                Try changing your search or filters.
-              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1280px] text-left text-sm">
-                <thead className="border-b border-[#e6e0d5] bg-[#fbf8f1]">
+              <table className="w-full min-w-[1180px] text-left text-sm">
+                <thead className="bg-[#fbf8f1]">
                   <tr>
-                    <th className="w-12 px-4 py-4">
+                    <th className="px-4 py-4">
                       <input
                         type="checkbox"
                         checked={
-                          sortedVouchers.length >
-                            0 &&
-                          sortedVouchers.every(
-                            (voucher) =>
-                              selected.includes(
-                                voucher.voucher_id
-                              )
+                          selected.length ===
+                            sorted.length &&
+                          sorted.length > 0
+                        }
+                        onChange={toggleAll}
+                      />
+                    </th>
+
+                    {[
+                      [
+                        "voucher_id",
+                        "Voucher",
+                      ],
+                      [
+                        "voucher_date",
+                        "Date",
+                      ],
+                      ["payee", "Paid To"],
+                      [
+                        "type_of_payee",
+                        "Type",
+                      ],
+                      [
+                        "towards",
+                        "Towards",
+                      ],
+                      ["amount", "Amount"],
+                      [
+                        "mode_of_payment",
+                        "Mode",
+                      ],
+                    ].map(([k, h]) => (
+                      <th
+                        key={k}
+                        className="cursor-pointer px-4 py-4 text-xs uppercase tracking-wider text-slate-500"
+                        onClick={() =>
+                          toggleSort(
+                            k as keyof Voucher
                           )
                         }
-                        onChange={
-                          toggleAll
-                        }
-                      />
-                    </th>
+                      >
+                        {h}{" "}
+                        <span>
+                          {sort.k === k
+                            ? sort.dir === 1
+                              ? "↑"
+                              : "↓"
+                            : ""}
+                        </span>
+                      </th>
+                    ))}
 
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Voucher"
-                        column="voucher_id"
-                      />
-                    </th>
-
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Date"
-                        column="voucher_date"
-                      />
-                    </th>
-
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Paid To"
-                        column="payee"
-                      />
-                    </th>
-
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Type"
-                        column="type_of_payee"
-                      />
-                    </th>
-
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Towards"
-                        column="towards"
-                      />
-                    </th>
-
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Amount"
-                        column="amount"
-                      />
-                    </th>
-
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Mode"
-                        column="mode_of_payment"
-                      />
-                    </th>
-
-                    <th className="px-4 py-4">
-                      <SortButton
-                        label="Created By"
-                        column="created_by_name"
-                      />
-                    </th>
-
-                    <th className="w-20 px-4 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <th className="px-4 py-4 text-right text-xs uppercase tracking-wider text-slate-500">
                       Action
                     </th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-[#eee9df]">
-                  {sortedVouchers.map(
-                    (voucher) => (
-                      <tr
-                        key={
-                          voucher.voucher_id
-                        }
-                        className="hover:bg-[#fffdf8]"
-                      >
-                        <td className="px-4 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selected.includes(
-                              voucher.voucher_id
-                            )}
-                            onChange={() =>
-                              toggle(
-                                voucher.voucher_id
-                              )
-                            }
-                          />
-                        </td>
-
-                        <td className="px-4 py-4 font-semibold text-[#101827]">
-                          #
-                          {
-                            voucher.voucher_id
-                          }
-                        </td>
-
-                        <td className="whitespace-nowrap px-4 py-4 text-slate-600">
-                          {formatDate(
-                            voucher.voucher_date
+                  {sorted.map((v) => (
+                    <tr
+                      key={v.voucher_id}
+                      className="hover:bg-[#fffdf8]"
+                    >
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(
+                            v.voucher_id
                           )}
-                        </td>
-
-                        <td className="px-4 py-4 font-semibold">
-                          {voucher.payee}
-                        </td>
-
-                        <td className="px-4 py-4 text-slate-600">
-                          {voucher.type_of_payee ===
-                          "Custom"
-                            ? voucher.custom_payee_type
-                            : voucher.type_of_payee}
-                        </td>
-
-                        <td className="max-w-xs px-4 py-4 text-slate-600">
-                          <span
-                            className="block truncate"
-                            title={
-                              voucher.towards
-                            }
-                          >
-                            {voucher.towards}
-                          </span>
-                        </td>
-
-                        <td className="whitespace-nowrap px-4 py-4 font-semibold">
-                          ₹{" "}
-                          {Number(
-                            voucher.amount
-                          ).toLocaleString(
-                            "en-IN",
-                            {
-                              minimumFractionDigits: 2,
-                            }
-                          )}
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <span className="rounded-full border border-[#e6e0d5] bg-[#fbf8f1] px-3 py-1 text-xs font-semibold">
-                            {
-                              voucher.mode_of_payment
-                            }
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-4 text-slate-600">
-                          {
-                            voucher.created_by_name
+                          onChange={() =>
+                            toggle(
+                              v.voucher_id
+                            )
                           }
-                        </td>
+                        />
+                      </td>
 
-                        {/* Three-dot action menu */}
-                        <td className="relative px-4 py-4 text-right">
-                          <button
-                            type="button"
-                            aria-label={`Actions for voucher #${voucher.voucher_id}`}
-                            aria-expanded={
-                              openActionId ===
-                              voucher.voucher_id
-                            }
-                            onClick={() =>
-                              setOpenActionId(
-                                openActionId ===
-                                  voucher.voucher_id
-                                  ? null
-                                  : voucher.voucher_id
-                              )
-                            }
-                            className="inline-grid h-9 w-9 place-items-center rounded-xl border border-transparent text-xl leading-none text-slate-500 transition hover:border-[#e6e0d5] hover:bg-[#fbf7ee] hover:text-[#101827]"
-                          >
-                            ⋮
-                          </button>
+                      <td className="px-4 py-4 font-semibold">
+                        {formatVoucherNumber(
+                          v.voucher_id,
+                          v.voucher_date
+                        )}
+                      </td>
 
-                          {openActionId ===
-                            voucher.voucher_id && (
-                            <div className="absolute right-4 top-14 z-50 w-44 overflow-hidden rounded-2xl border border-[#e6e0d5] bg-[#fffdf8] text-left shadow-[0_18px_45px_rgba(16,24,39,.16)]">
+                      <td className="px-4 py-4">
+                        {date(v.voucher_date)}
+                      </td>
+
+                      <td className="px-4 py-4 font-semibold">
+                        {v.payee}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        {v.type_of_payee ===
+                        "Custom"
+                          ? v.custom_payee_type
+                          : v.type_of_payee}
+                      </td>
+
+                      <td className="max-w-xs px-4 py-4">
+                        <span
+                          className="block truncate"
+                          title={v.towards}
+                        >
+                          {v.towards}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 font-semibold">
+                        ₹{" "}
+                        {Number(
+                          v.amount
+                        ).toLocaleString(
+                          "en-IN",
+                          {
+                            minimumFractionDigits: 2,
+                          }
+                        )}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        {v.mode_of_payment}
+                      </td>
+
+                      {/* 3-dot action menu */}
+                      <td className="px-4 py-4">
+                        <div className="relative flex justify-end">
+                          {archived ? (
+                            <button
+                              className="lux-link"
+                              onClick={() =>
+                                restore(
+                                  v.voucher_id
+                                )
+                              }
+                            >
+                              Restore
+                            </button>
+                          ) : (
+                            <>
                               <button
                                 type="button"
-                                className="block w-full px-4 py-3 text-left text-sm font-semibold text-[#101827] hover:bg-[#fbf7ee]"
+                                aria-label={`Actions for voucher ${formatVoucherNumber(
+                                  v.voucher_id,
+                                  v.voucher_date
+                                )}`}
+                                aria-expanded={
+                                  actionOpen ===
+                                  v.voucher_id
+                                }
+                                className="action-menu-trigger"
                                 onClick={() =>
-                                  previewVoucher(
-                                    voucher.voucher_id
+                                  setActionOpen(
+                                    actionOpen ===
+                                      v.voucher_id
+                                      ? null
+                                      : v.voucher_id
                                   )
                                 }
                               >
-                                Preview PDF
+                                ⋯
                               </button>
 
-                              <button
-                                type="button"
-                                className="block w-full border-t border-[#eee9df] px-4 py-3 text-left text-sm font-semibold text-[#101827] hover:bg-[#fbf7ee]"
-                                onClick={() => {
-                                  setOpenActionId(
-                                    null
-                                  );
+                              {actionOpen ===
+                                v.voucher_id && (
+                                <>
+                                  <button
+                                    className="fixed inset-0 z-10 cursor-default"
+                                    aria-label="Close action menu"
+                                    onClick={() =>
+                                      setActionOpen(
+                                        null
+                                      )
+                                    }
+                                  />
 
-                                  router.push(
-                                    `/vouchers/${voucher.voucher_id}/edit`
-                                  );
-                                }}
-                              >
-                                Edit
-                              </button>
+                                  <div className="action-menu">
+                                    <button
+                                      onClick={() => {
+                                        setPreview(
+                                          v.voucher_id
+                                        );
+                                        setActionOpen(
+                                          null
+                                        );
+                                      }}
+                                    >
+                                      PDF Preview
+                                    </button>
 
-                              <button
-                                type="button"
-                                className="block w-full border-t border-[#eee9df] px-4 py-3 text-left text-sm font-semibold text-[#9a4d4d] hover:bg-red-50"
-                                onClick={() => {
-                                  setOpenActionId(
-                                    null
-                                  );
+                                    <button
+                                      onClick={() => {
+                                        r.push(
+                                          `/vouchers/${v.voucher_id}/edit`
+                                        );
+                                        setActionOpen(
+                                          null
+                                        );
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
 
-                                  setDeletingId(
-                                    voucher.voucher_id
-                                  );
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </div>
+                                    <button
+                                      className="danger"
+                                      onClick={() => {
+                                        setActionOpen(
+                                          null
+                                        );
+                                        archive(
+                                          v.voucher_id
+                                        );
+                                      }}
+                                    >
+                                      Archive
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </>
                           )}
-                        </td>
-                      </tr>
-                    )
-                  )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -1199,63 +777,10 @@ export default function VouchersPageClient({
         </div>
       </div>
 
-      {/* Delete confirmation */}
-      {deletingId !== null && (
-        <div className="fixed inset-0 z-[100] grid place-items-center bg-[#101827]/45 px-5 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-[#e6e0d5] bg-[#fffdf8] p-7 shadow-[0_25px_70px_rgba(16,24,39,.25)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#b8955a]">
-              Delete voucher
-            </p>
-
-            <h2 className="lux-serif mt-2 text-2xl">
-              Delete voucher #
-              {deletingId}?
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              This permanently removes the voucher
-              from the register.
-            </p>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                className="lux-secondary"
-                onClick={() =>
-                  setDeletingId(null)
-                }
-              >
-                Cancel
-              </button>
-
-              <button
-                className="rounded-xl border border-[#9a4d4d] bg-[#9a4d4d] px-5 py-3 text-sm font-semibold text-white hover:bg-[#7c3030]"
-                onClick={
-                  deleteVoucher
-                }
-              >
-                Delete Voucher
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* PDF Preview */}
       <PdfPreviewModal
-        open={pdfPreviewOpen}
-        pdfUrl={pdfPreviewUrl}
-        fileName={
-          pdfPreviewFileName
-        }
-        loading={
-          pdfPreviewLoading
-        }
-        error={pdfPreviewError}
-        onClose={
-          closePdfPreview
-        }
-        onDownload={
-          downloadPreviewedPdf
+        voucherId={preview}
+        onClose={() =>
+          setPreview(null)
         }
       />
     </main>

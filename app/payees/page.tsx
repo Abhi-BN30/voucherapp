@@ -1,13 +1,5 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
-import PayeesPageClient from "./PayeesPageClient";
-
-export default async function PayeesPage() {
-  const session = await getSession();
-
-  if (!session) {
-    redirect("/");
-  }
-
-  return <PayeesPageClient user={session} />;
-}
+"use client";
+import {useEffect,useState} from 'react';
+import {useRouter} from 'next/navigation';
+type P={payee_id:number;payee_name:string};
+export default function PayeesPage(){const r=useRouter();const [items,setItems]=useState<P[]>([]);const [name,setName]=useState('');const [loading,setLoading]=useState(true);const [msg,setMsg]=useState('');async function load(){setLoading(true);const x=await fetch('/api/payees');const d=await x.json();if(x.ok)setItems(d.payees||[]);else if(x.status===401)r.push('/');setLoading(false)}useEffect(()=>{load()},[]);async function add(e:React.FormEvent){e.preventDefault();setMsg('');const x=await fetch('/api/payees',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});const d=await x.json();if(!x.ok){setMsg(d.message||'Unable to add payee');return}setName('');setMsg('Payee added.');load()}return <main className="lux-page"><header className="lux-header"><div className="lux-shell flex items-center justify-between py-4"><div><p className="text-[10px] uppercase tracking-[.24em] text-[#b8955a]">Payment Voucher</p><p className="lux-serif text-lg">Payee Registry</p></div><button className="lux-secondary" onClick={()=>r.push('/dashboard')}>Dashboard</button></div></header><div className="lux-shell py-8"><div className="flex items-end justify-between"><div><p className="text-[11px] font-semibold uppercase tracking-[.28em] text-[#b8955a]">Master registry</p><h1 className="lux-serif mt-2 text-4xl">Payees</h1></div></div><div className="lux-card mt-8 p-6"><form onSubmit={add} className="flex flex-col gap-3 sm:flex-row"><input className="lux-input flex-1" value={name} onChange={e=>setName(e.target.value)} placeholder="Payee name" required/><button className="lux-primary">Add Payee</button></form>{msg&&<p className="mt-3 text-sm text-slate-500">{msg}</p>}</div><div className="lux-card mt-5 overflow-hidden">{loading?<div className="p-10 text-center text-sm text-slate-500">Loading…</div>:<table className="w-full text-left text-sm"><thead className="bg-[#fbf8f1]"><tr><th className="px-5 py-4">Payee Number</th><th className="px-5 py-4">Payee Name</th><th className="px-5 py-4">History</th></tr></thead><tbody className="divide-y divide-[#eee9df]">{items.map(p=><tr key={p.payee_id}><td className="px-5 py-4 font-semibold">#{p.payee_id}</td><td className="px-5 py-4">{p.payee_name}</td><td className="px-5 py-4"><button className="lux-link" onClick={()=>r.push(`/payees/${p.payee_id}`)}>View history →</button></td></tr>)}</tbody></table>}</div></div></main>}
